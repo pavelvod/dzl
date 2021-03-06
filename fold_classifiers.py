@@ -25,7 +25,7 @@ class CatboostClassifierFoldTrainer(BaseFoldClassifier):
         # print(self.ds.train.X.select_dtypes('object').columns.tolist())
         self.model.fit(self.ds.train.X,
                        y=self.ds.train.y,
-                       cat_features=self.ds.train.X.select_dtypes('category').columns.tolist(),
+                       cat_features=self.ds.categorical_features,
                        eval_set=[(self.ds.valid.X, self.ds.valid.y)],
                        **self.params['fit_params']
                        )
@@ -66,14 +66,14 @@ class LightGBMClassifierFoldTrainer(BaseFoldClassifier):
         self.model = self.get_model()
         self.model.fit(self.ds.train.X,
                        y=self.ds.train.y,
-                       categorical_feature='auto',
+                       categorical_feature=self.ds.categorical_features,
                        eval_set=[(self.ds.valid.X, self.ds.valid.y)],
                        **self.params['fit_params']
                        )
         return self
 
     def predict(self, typ: str):
-        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X.values)[:, 1],
+        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X)[:, 1],
                              index=self.ds[typ].X.index,
                              columns=self.ds[typ].y.columns)
         return preds
