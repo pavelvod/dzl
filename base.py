@@ -1,3 +1,4 @@
+import sklearn
 from tqdm.autonotebook import tqdm
 from abc import abstractmethod
 
@@ -10,9 +11,13 @@ import pathlib
 import warnings
 import numpy as np
 import sklearn.preprocessing as prep
+import category_encoders as ce
+from sklearn import metrics
 
 warnings.filterwarnings('ignore')
 
+scorers = dict(roc_auc_score=metrics.roc_auc_score,
+               log_loss=metrics.log_loss)
 
 class DataBlock:
     def __init__(self, index: list, data: pd.DataFrame):
@@ -77,6 +82,8 @@ def create_data_manager(feature_block: DataBlock,
         else:
             categorical_features = [categorical_features]
 
+    categorical_features = list(set(categorical_features))
+
     missing_categorical_columns = list(set(feature_columns) - set(categorical_features))
     assert len(missing_categorical_columns) > 0, f'categorical_features {missing_categorical_columns} are missed'
 
@@ -103,6 +110,26 @@ def create_data_manager(feature_block: DataBlock,
                        inverse_cv=inverse_cv,
                        categorical_features=categorical_features
                        )
+
+
+encoders_dict = {enc_cls.__name__: enc_cls for enc_cls in [ce.BackwardDifferenceEncoder,
+                                                           ce.BaseNEncoder,
+                                                           ce.BinaryEncoder,
+                                                           ce.CatBoostEncoder,
+                                                           ce.CountEncoder,
+                                                           ce.GLMMEncoder,
+                                                           ce.HashingEncoder,
+                                                           ce.HelmertEncoder,
+                                                           ce.JamesSteinEncoder,
+                                                           ce.LeaveOneOutEncoder,
+                                                           ce.MEstimateEncoder,
+                                                           ce.OneHotEncoder,
+                                                           ce.OrdinalEncoder,
+                                                           ce.SumEncoder,
+                                                           ce.PolynomialEncoder,
+                                                           ce.TargetEncoder,
+                                                           ce.WOEEncoder]
+                 }
 
 
 class DataManager:
@@ -243,6 +270,28 @@ class DataManager:
         self.data[self.cv_column] = s
         return self
 
+    def categorical_encode(self, method):
+
+        vals = []
+        tsts = []
+        for fold_id in self.data[self.cv_column].dropna().sort_values().unique():
+            self.active_fold = fold_id
+            encoder = encoders_dict[method](self.categorical_features)
+            encoder.fit(self.train.data, self.train.y)
+            vals.append(encoder.transform(self.valid.data))
+            tsts.append(encoder.transform(self.test.data))
+
+        data = pd.concat([pd.concat(vals), pd.concat(tsts).groupby(level=0).mean()]).sort_index()
+
+        return DataManager(data=data,
+                           feature_columns=self.feature_columns,
+                           label_columns=self.label_columns,
+                           weight_column=self.weight_column,
+                           cv_column=self.cv_column,
+                           train_split_column=self.train_split_column,
+                           categorical_features=self.categorical_features
+                           )
+
 
 class CVTrainer:
     def __init__(self,
@@ -321,8 +370,10 @@ class CVTrainer:
         return pd.concat(results)
 
     def score(self, typ: str):
+        metric = self.trainers[0].metric
+
         ypred, ytrue = self.predict(typ).align(self.ds.labeled.y, join='right')
-        return roc_auc_score(ytrue, ypred)
+        return scorers[metric](ytrue, ypred)
 
 
 class Callback:
@@ -337,13 +388,16 @@ class Callback:
 
 
 class BaseFoldTrainer:
+
+
     def __init__(self,
                  model_name: str,
                  ds: DataManager,
                  fold_id: int,
                  save_path: pathlib.Path,
                  params: dict,
-                 ext: str = 'model'):
+                 ext: str = 'model',
+                 metric='roc_auc_score'):
         self.fold_id: int = fold_id
         self.model_name: str = model_name
         self.model_fname = f"{ds.cv_column}_fold{fold_id}.{ext}"
@@ -356,6 +410,7 @@ class BaseFoldTrainer:
         self.fit = self.fit_decor(self.fit)
         self.predict = self.predict_decor(self.predict)
         self.extract_features = self.extract_decor(self.extract_features)
+        self.metric = metric
 
     def fit_decor(self, fn):
         def inner(*args, **kwargs):
@@ -409,9 +464,10 @@ class BaseFoldTrainer:
 
     def score(self, typ: str):
         ypred, ytrue = self.predict(typ).align(self.ds[typ].y, join='right')
-        auc = roc_auc_score(ytrue, ypred)
-        print(f'AUC {typ}: {auc}')
-        return auc
+
+        score = scorers[self.metric](ytrue, ypred)
+        print(f'{self.metric} {typ}: {score}')
+        return score
 
     def exists(self):
         return self.save_path.exists()

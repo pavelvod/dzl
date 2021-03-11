@@ -2,11 +2,12 @@ import catboost
 import lightgbm as lightgbm
 import xgboost
 import pandas as pd
-
+import numpy as np
 from pytorch_tabnet.pretraining import TabNetPretrainer
 from pytorch_tabnet.tab_model import TabNetClassifier
 
 from base import BaseFoldClassifier
+import sklearn.preprocessing as prep
 
 
 class CatboostClassifierFoldTrainer(BaseFoldClassifier):
@@ -66,14 +67,14 @@ class LightGBMClassifierFoldTrainer(BaseFoldClassifier):
         self.model = self.get_model()
         self.model.fit(self.ds.train.X,
                        y=self.ds.train.y,
-                       categorical_feature='auto',
+                       categorical_feature=self.ds.categorical_features,
                        eval_set=[(self.ds.valid.X, self.ds.valid.y)],
                        **self.params['fit_params']
                        )
         return self
 
     def predict(self, typ: str):
-        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X.values)[:, 1],
+        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X)[:, 1],
                              index=self.ds[typ].X.index,
                              columns=self.ds[typ].y.columns)
         return preds
@@ -98,7 +99,7 @@ class XGBoostClassifierFoldTrainer(BaseFoldClassifier):
         self.model.fit(self.ds.train.X,
                        y=self.ds.train.y,
                        eval_set=[(self.ds.valid.X, self.ds.valid.y)],
-                       early_stopping_rounds=50,
+                       early_stopping_rounds=100,
                        **self.params['fit_params']
                        )
         return self
@@ -116,27 +117,39 @@ class XGBoostClassifierFoldTrainer(BaseFoldClassifier):
 class TabNetFoldTrainer(BaseFoldClassifier):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.cat_idxs = []
+        self.cat_dims = []
 
     def get_model(self):
-        return TabNetClassifier(**self.params['init_params'])
+        return TabNetClassifier(cat_dims=self.cat_dims, cat_idxs=self.cat_idxs,
+                                **self.params['init_params'])
+
+    def preprocess(self):
+        categorical_dims = self.ds.data[self.ds.categorical_features].nunique().to_dict()
+        columns = self.ds.data.columns.tolist()
+        self.cat_idxs = [columns.index(col) for col in self.ds.categorical_features]
+        self.cat_dims = [categorical_dims[col] + 1 for col in self.ds.categorical_features]
 
     def fit(self):
         print(self.ds.active_fold, self.ds.train.X.shape, self.ds.train.y.shape, self.ds.valid.X.shape,
               self.ds.valid.y.shape)
-
+        self.preprocess()
         self.model = self.get_model()
         print(self.model)
+
         fit_params = dict(X_train=self.ds.train.X.values,
                           y_train=self.ds.train.y.values.ravel(),
                           eval_set=[(self.ds.train.X.values, self.ds.train.y.values.ravel()),
-                                    (self.ds.valid.X.values, self.ds.valid.y.values.ravel())],
+                                    (self.ds.train.X.values, self.ds.train.y.values.ravel())],
                           eval_name=['trn', 'val'],
-                          eval_metric=['auc'], )
+                          )
+        fit_params.update(self.params['fit_params'])
 
         if self.params.get('config', {}).get('pretrain', False):
-            unsupervised_model = TabNetPretrainer(**self.params['init_params'])
+            unsupervised_model = TabNetPretrainer(cat_idxs=self.cat_idxs, cat_dims=self.cat_dims,
+                                                  **self.params['init_params'])
             unsupervised_model.fit(X_train=self.ds.train.X.values,
-                                   eval_set=[self.ds.valid.X.values],
+                                   eval_set=[self.ds.train.X.values],
                                    pretraining_ratio=0.8
                                    )
 
