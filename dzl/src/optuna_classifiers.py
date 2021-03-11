@@ -70,7 +70,7 @@ class LGBMOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('..'),
+                            save_path=pathlib.Path('../..'),
                             metric=self.metric
                             )
         trainer.fit()
@@ -144,7 +144,7 @@ class CatBoostOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('..'),
+                            save_path=pathlib.Path('../..'),
                             metric=self.metric
                             )
         trainer.fit()
@@ -216,7 +216,7 @@ class XGBoostOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('..'),
+                            save_path=pathlib.Path('../..'),
                             metric=self.metric
                             )
         trainer.fit()
@@ -295,7 +295,7 @@ class TabNetOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('..'),
+                            save_path=pathlib.Path('../..'),
                             metric=self.metric
                             )
         trainer.fit()
@@ -356,7 +356,7 @@ class HistGradientBoostingOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('..'),
+                            save_path=pathlib.Path('../..'),
                             metric=self.metric
                             )
         trainer.fit()
@@ -405,7 +405,7 @@ class LogRegOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('..'),
+                            save_path=pathlib.Path('../..'),
                             metric=self.metric
                             )
         trainer.fit()
