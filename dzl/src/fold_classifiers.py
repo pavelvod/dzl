@@ -6,7 +6,7 @@ import numpy as np
 from pytorch_tabnet.pretraining import TabNetPretrainer
 from pytorch_tabnet.tab_model import TabNetClassifier
 
-from base import BaseFoldClassifier
+from .base import BaseFoldClassifier
 import sklearn.preprocessing as prep
 
 
@@ -140,16 +140,16 @@ class TabNetFoldTrainer(BaseFoldClassifier):
         fit_params = dict(X_train=self.ds.train.X.values,
                           y_train=self.ds.train.y.values.ravel(),
                           eval_set=[(self.ds.train.X.values, self.ds.train.y.values.ravel()),
-                                    (self.ds.train.X.values, self.ds.train.y.values.ravel())],
+                                    (self.ds.valid.X.values, self.ds.valid.y.values.ravel())],
                           eval_name=['trn', 'val'],
                           )
         fit_params.update(self.params['fit_params'])
-
+        print(self.params['fit_params'])
         if self.params.get('config', {}).get('pretrain', False):
             unsupervised_model = TabNetPretrainer(cat_idxs=self.cat_idxs, cat_dims=self.cat_dims,
-                                                  **self.params['init_params'])
+                                                  **self.params['init_params'], device_name='cpu')
             unsupervised_model.fit(X_train=self.ds.train.X.values,
-                                   eval_set=[self.ds.train.X.values],
+                                   eval_set=[self.ds.valid.X.values],
                                    pretraining_ratio=0.8
                                    )
 
@@ -184,8 +184,6 @@ class SklearnClassifierFoldTrainer(BaseFoldClassifier):
         return sklearn.pipeline.make_pipeline(*steps)
 
     def fit(self):
-        # print(self.ds.active_fold, self.ds.train.X.shape, self.ds.train.y.shape, self.ds.valid.X.shape,
-        #       self.ds.valid.y.shape)
         self.model = self.get_model()
         self.model.fit(self.ds.train.X,
                        y=self.ds.train.y
@@ -193,9 +191,16 @@ class SklearnClassifierFoldTrainer(BaseFoldClassifier):
         return self
 
     def predict(self, typ: str):
-        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X.values)[:, 1],
-                             index=self.ds[typ].X.index,
-                             columns=self.ds[typ].y.columns)
+        if self.task == 'predict_proba':
+            preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X.values)[:, 1],
+                                 index=self.ds[typ].X.index,
+                                 columns=self.ds[typ].y.columns)
+        elif self.task == 'predict':
+            preds = pd.DataFrame(self.model.predict(self.ds[typ].X.values),
+                                 index=self.ds[typ].X.index,
+                                 columns=self.ds[typ].y.columns)
+        else:
+            raise Exception('Unknown Task!')
         return preds
 
     def extract_features(self, typ: str) -> pd.DataFrame:

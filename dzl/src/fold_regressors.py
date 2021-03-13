@@ -2,7 +2,7 @@ import lightgbm as lightgbm
 
 import pandas as pd
 
-from base import BaseFoldRegressor
+from .base import BaseFoldRegressor
 
 
 class LightGBMRegressorFoldTrainer(BaseFoldRegressor):

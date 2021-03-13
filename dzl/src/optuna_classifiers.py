@@ -5,8 +5,8 @@ import namegenerator
 import optuna
 import torch
 
-from base import CVTrainer
-from fold_classifiers import LightGBMClassifierFoldTrainer, CatboostClassifierFoldTrainer, TabNetFoldTrainer, \
+from .base import CVTrainer
+from .fold_classifiers import LightGBMClassifierFoldTrainer, CatboostClassifierFoldTrainer, TabNetFoldTrainer, \
     XGBoostClassifierFoldTrainer, SklearnClassifierFoldTrainer
 
 
@@ -88,14 +88,14 @@ class LGBMOptunaOptimizer(OptunaOptimizer):
                 'learning_rate': 0.03,
                 'lambda_l1': trial.suggest_loguniform('lambda_l1', 1E-16, 25.0),
                 'lambda_l2': trial.suggest_loguniform('lambda_l2', 1E-16, 25.0),
-                'reg_alpha': trial.suggest_loguniform('lambda_l2', 1E-16, 25.0),
-                'reg_lambda': trial.suggest_loguniform('lambda_l2', 1E-16, 25.0),
-                'subsample': trial.suggest_float('subsample ', 1E-16, 1.0),
+                # 'reg_alpha': trial.suggest_loguniform('lambda_l2', 1E-16, 25.0),
+                # 'reg_lambda': trial.suggest_loguniform('lambda_l2', 1E-16, 25.0),
+                # 'subsample': trial.suggest_float('subsample ', 1E-16, 0.7),
                 'cat_smooth': trial.suggest_float('cat_smooth', 1.0, 50.0),
                 'max_depth': trial.suggest_int('max_depth', self.min_depth, self.max_depth),
                 'num_leaves': trial.suggest_int('num_leaves', 2, 1024 * 32),
-                'feature_fraction': trial.suggest_uniform('feature_fraction', 0.4, 1.0),
-                'bagging_fraction': trial.suggest_uniform('bagging_fraction', 0.4, 1.0),
+                'feature_fraction': trial.suggest_uniform('feature_fraction', 0.2, 0.7),
+                'bagging_fraction': trial.suggest_uniform('bagging_fraction', 0.2, 0.7),
                 'bagging_freq': trial.suggest_int('bagging_freq', 1, 64),
                 'min_child_samples': trial.suggest_int('min_child_samples', 1, 3000),
             },
@@ -325,7 +325,7 @@ class TabNetOptunaOptimizer(OptunaOptimizer):
 
         params = dict(
             init_params=init_params,
-            fit_params=dict(max_epochs=5, eval_metric=['eval_metric']),
+            fit_params=dict(max_epochs=5, eval_metric=[eval_metric]),
             config=dict(pretrain=False)
         )
 
@@ -333,7 +333,8 @@ class TabNetOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
-                            save_path=pathlib.Path('./cache')
+                            save_path=pathlib.Path('./cache'),
+                            metric=self.metric
                             )
 
         return trainer.fit_single_fold()
@@ -426,7 +427,7 @@ class LogRegOptunaOptimizer(OptunaOptimizer):
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
                             save_path=pathlib.Path('./cache'),
-                            metric='log_loss'
+                            metric=self.metric
                             )
 
         return trainer.fit_single_fold()

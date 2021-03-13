@@ -19,6 +19,7 @@ warnings.filterwarnings('ignore')
 scorers = dict(roc_auc_score=metrics.roc_auc_score,
                log_loss=metrics.log_loss)
 
+
 class DataBlock:
     def __init__(self, index: list, data: pd.DataFrame):
         if len(set(index) - set(data.columns)) == len(set(index)):
@@ -42,7 +43,7 @@ class DataBlock:
                               data=self.data.merge(other.data, left_index=True, right_index=True))
 
     def split(self, column_names):
-        assert set(self.columns).issuperset(set(column_names))
+        assert set(self.columns).issuperset(set(column_names)), f'{column_names}'
         remain_columns = [col for col in self.columns if col not in column_names]
         return self.__class__(self.data[remain_columns]), self.__class__(self.data[column_names])
 
@@ -51,34 +52,42 @@ class DataBlock:
                                            columns=self.data.columns,
                                            index=self.data.index))
 
+    def add_empty_column(self, column_name):
+        self.data = self.data.assign(**{column_name: np.nan})
+        return self
 
-def create_data_manager(feature_block: DataBlock,
-                        label_block: DataBlock,
-                        control_block: DataBlock,
+
+def create_data_manager(data_block: DataBlock,
                         cv_column: str,
                         train_split_column: str,
-                        label_columns: Optional[list] = None,
+                        label_columns: list,
                         drop_columns=None,
                         weight_column: Optional[str] = None,
-                        inverse_cv: bool = False,
                         categorical_features='auto'
                         ):
+    feature_block, control_block = data_block.split([train_split_column])
+    feature_block, label_block = feature_block.split(label_columns)
+
     if drop_columns is None:
         drop_columns = []
 
     if label_columns is None:
         label_columns = []
 
-    assert cv_column in control_block.columns
+    if cv_column not in control_block.columns:
+        control_block.add_empty_column(cv_column)
+
     assert train_split_column in control_block.columns
     if weight_column:
         assert weight_column in control_block.columns
 
-    feature_columns = [col for col in feature_block.columns if col not in drop_columns]
+    feature_columns = [col for col in data_block.columns if col not in drop_columns]
+    feature_columns = [col for col in feature_columns if col not in control_block.columns]
+    feature_columns = [col for col in feature_columns if col not in label_block.columns]
 
     if isinstance(categorical_features, str):
         if categorical_features == 'auto':
-            categorical_features = feature_block.data.select_dtypes([object, 'category']).columns.tolist()
+            categorical_features = data_block.data.select_dtypes([object, 'category']).columns.tolist()
         else:
             categorical_features = [categorical_features]
 
@@ -107,7 +116,7 @@ def create_data_manager(feature_block: DataBlock,
                        weight_column=weight_column,
                        cv_column=cv_column,
                        train_split_column=train_split_column,
-                       inverse_cv=inverse_cv,
+                       inverse_cv=False,
                        categorical_features=categorical_features
                        )
 
@@ -300,11 +309,12 @@ class CVTrainer:
                  params: dict, ds: DataManager,
                  save_path: pathlib.Path,
                  callbacks: list = [],
+                 task='predict_proba',
                  *args, **kwargs):
         self.fold_trainer_cls = fold_trainer_cls
         self.params = params
         self.n_folds: int = int(ds.data[ds.cv_column].max() + 1)
-
+        self.task = task
         self.args = args
         self.kwargs = kwargs
         self.model_name = model_name
@@ -316,6 +326,7 @@ class CVTrainer:
                                                      fold_id=fold_id,
                                                      save_path=self.save_path,
                                                      params=self.params,
+                                                     task=self.task,
                                                      *self.args,
                                                      **self.kwargs)
                                for fold_id in range(self.n_folds)]
@@ -376,6 +387,17 @@ class CVTrainer:
         return scorers[metric](ytrue, ypred)
 
 
+class CVVoteTrainer(CVTrainer):
+    def extract_features(self) -> DataBlock:
+        index = self.ds.index_columns
+        data = pd.concat([self.predict('val'),
+                          self.predict('tst').groupby(level=index).agg(lambda x: x.value_counts().index[0])])
+        data.columns = [f'{self.model_name}__{column}' for column in data.columns]
+        return DataBlock(index=index,
+                         data=data
+                         )
+
+
 class Callback:
     def __init__(self):
         pass
@@ -389,7 +411,6 @@ class Callback:
 
 class BaseFoldTrainer:
 
-
     def __init__(self,
                  model_name: str,
                  ds: DataManager,
@@ -397,7 +418,8 @@ class BaseFoldTrainer:
                  save_path: pathlib.Path,
                  params: dict,
                  ext: str = 'model',
-                 metric='roc_auc_score'):
+                 metric='roc_auc_score',
+                 task='predict_proba'):
         self.fold_id: int = fold_id
         self.model_name: str = model_name
         self.model_fname = f"{ds.cv_column}_fold{fold_id}.{ext}"
@@ -411,6 +433,7 @@ class BaseFoldTrainer:
         self.predict = self.predict_decor(self.predict)
         self.extract_features = self.extract_decor(self.extract_features)
         self.metric = metric
+        self.task = task
 
     def fit_decor(self, fn):
         def inner(*args, **kwargs):
