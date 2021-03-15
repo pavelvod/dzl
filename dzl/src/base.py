@@ -1,4 +1,5 @@
 import sklearn
+from sklearn.model_selection import StratifiedKFold
 from tqdm.autonotebook import tqdm
 from abc import abstractmethod
 
@@ -63,7 +64,8 @@ def create_data_manager(data_block: DataBlock,
                         label_columns: list,
                         drop_columns=None,
                         weight_column: Optional[str] = None,
-                        categorical_features='auto'
+                        categorical_features='auto',
+                        cv_object=StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
                         ):
     feature_block, control_block = data_block.split([train_split_column])
     feature_block, label_block = feature_block.split(label_columns)
@@ -118,7 +120,7 @@ def create_data_manager(data_block: DataBlock,
                        train_split_column=train_split_column,
                        inverse_cv=False,
                        categorical_features=categorical_features
-                       )
+                       ).set_new_cv(cv_object)
 
 
 encoders_dict = {enc_cls.__name__: enc_cls for enc_cls in [ce.BackwardDifferenceEncoder,

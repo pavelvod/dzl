@@ -150,7 +150,8 @@ class TabNetFoldTrainer(BaseFoldClassifier):
                                                   **self.params['init_params'], device_name='cpu')
             unsupervised_model.fit(X_train=self.ds.train.X.values,
                                    eval_set=[self.ds.valid.X.values],
-                                   pretraining_ratio=0.8
+                                   pretraining_ratio=0.8,
+                                   max_epochs=20
                                    )
 
             self.model.fit(from_unsupervised=unsupervised_model, **fit_params

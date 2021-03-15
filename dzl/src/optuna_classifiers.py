@@ -11,9 +11,17 @@ from .fold_classifiers import LightGBMClassifierFoldTrainer, CatboostClassifierF
 
 
 class OptunaOptimizer:
-    def __init__(self, name, num_trials, metric='roc_auc_score'):
+    def __init__(self,
+                 name,
+                 num_trials=50,
+                 model_path=pathlib.Path('.'),
+                 cache_path=None,
+                 metric='roc_auc_score',
+                 *args, **kwargs):
         self.name = name
         self.num_trials = num_trials
+        self.model_path = pathlib.Path(model_path)
+        self.cache_path = cache_path or self.model_path / 'cache'
         self.study = optuna.create_study(direction="maximize",
                                          study_name=self.name,
                                          storage=f'sqlite:///{self.name}.sqlite3',
@@ -40,8 +48,9 @@ class OptunaOptimizer:
 
 
 class LGBMOptunaOptimizer(OptunaOptimizer):
-    def __init__(self, name, num_trials, min_depth=1, max_depth=99, *args, **kwargs):
-        super().__init__(name=name, num_trials=num_trials, *args, **kwargs)
+    def __init__(self, min_depth=1, max_depth=99,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.min_depth = min_depth
         self.max_depth = max_depth
 
@@ -91,7 +100,7 @@ class LGBMOptunaOptimizer(OptunaOptimizer):
                 # 'reg_alpha': trial.suggest_loguniform('lambda_l2', 1E-16, 25.0),
                 # 'reg_lambda': trial.suggest_loguniform('lambda_l2', 1E-16, 25.0),
                 # 'subsample': trial.suggest_float('subsample ', 1E-16, 0.7),
-                'cat_smooth': trial.suggest_float('cat_smooth', 1.0, 50.0),
+                # 'cat_smooth': trial.suggest_float('cat_smooth', 1.0, 50.0),
                 'max_depth': trial.suggest_int('max_depth', self.min_depth, self.max_depth),
                 'num_leaves': trial.suggest_int('num_leaves', 2, 1024 * 32),
                 'feature_fraction': trial.suggest_uniform('feature_fraction', 0.2, 0.7),
@@ -111,14 +120,19 @@ class LGBMOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
-                            save_path=pathlib.Path('./cache')
+                            save_path=self.cache_path
                             )
-        return trainer.fit_single_fold()
+        trainer.fit()
+        trainer.save()
+        print(trainer.score('trn'), trainer.score('val'))
+        return trainer.score('val')
 
 
 class CatBoostOptunaOptimizer(OptunaOptimizer):
-    def __init__(self, name, num_trials, min_depth=1, max_depth=99, *args, **kwargs):
-        super().__init__(name=name, num_trials=num_trials, *args, **kwargs)
+    def __init__(self, min_depth=1, max_depth=99,
+                 *args, **kwargs):
+        super().__init__(*args,
+                         **kwargs)
         self.min_depth = min_depth
         self.max_depth = max_depth
 
@@ -183,14 +197,14 @@ class CatBoostOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
-                            save_path=pathlib.Path('./cache')
+                            save_path=self.cache_path
                             )
         return trainer.fit_single_fold()
 
 
 class XGBoostOptunaOptimizer(OptunaOptimizer):
-    def __init__(self, name, num_trials, min_depth=1, max_depth=99, *args, **kwargs):
-        super().__init__(name=name, num_trials=num_trials, *args, **kwargs)
+    def __init__(self, min_depth=1, max_depth=99, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.min_depth = min_depth
         self.max_depth = max_depth
 
@@ -216,7 +230,7 @@ class XGBoostOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('../..'),
+                            save_path=self.model_path,
                             metric=self.metric
                             )
         trainer.fit()
@@ -259,15 +273,15 @@ class XGBoostOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
-                            save_path=pathlib.Path('./cache'),
+                            save_path=self.cache_path,
                             metric=self.metric
                             )
         return trainer.fit_single_fold()
 
 
 class TabNetOptunaOptimizer(OptunaOptimizer):
-    def __init__(self, name, num_trials, min_steps=1, max_steps=99, *args, **kwargs):
-        super().__init__(name=name, num_trials=num_trials, *args, **kwargs)
+    def __init__(self, min_steps=1, max_steps=99, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.min_steps = min_steps
         self.max_steps = max_steps
 
@@ -295,7 +309,7 @@ class TabNetOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('../..'),
+                            save_path=self.model_path,
                             metric=self.metric
                             )
         trainer.fit()
@@ -333,7 +347,7 @@ class TabNetOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
-                            save_path=pathlib.Path('./cache'),
+                            save_path=self.cache_path,
                             metric=self.metric
                             )
 
@@ -341,8 +355,8 @@ class TabNetOptunaOptimizer(OptunaOptimizer):
 
 
 class HistGradientBoostingOptunaOptimizer(OptunaOptimizer):
-    def __init__(self, name, num_trials, *args, **kwargs):
-        super().__init__(name=name, num_trials=num_trials, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def retrain(self, ds):
         init_params = dict(max_iter=9999,
@@ -357,7 +371,7 @@ class HistGradientBoostingOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('../..'),
+                            save_path=self.model_path,
                             metric=self.metric
                             )
         trainer.fit()
@@ -381,15 +395,15 @@ class HistGradientBoostingOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
-                            save_path=pathlib.Path('./cache')
+                            save_path=self.cache_path
                             )
 
         return trainer.fit_single_fold()
 
 
 class LogRegOptunaOptimizer(OptunaOptimizer):
-    def __init__(self, name, num_trials, *args, **kwargs):
-        super().__init__(name=name, num_trials=num_trials, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def retrain(self, ds):
         init_params = dict()
@@ -406,7 +420,7 @@ class LogRegOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=self.name,
                             params=params,
-                            save_path=pathlib.Path('../..'),
+                            save_path=self.model_path,
                             metric=self.metric
                             )
         trainer.fit()
@@ -426,7 +440,7 @@ class LogRegOptunaOptimizer(OptunaOptimizer):
                             ds=ds,
                             model_name=f'{self.name}_{namegenerator.gen()}',
                             params=params,
-                            save_path=pathlib.Path('./cache'),
+                            save_path=self.cache_path,
                             metric=self.metric
                             )
 
