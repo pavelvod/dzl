@@ -16,6 +16,8 @@ class CatboostClassifierFoldTrainer(BaseFoldClassifier):
         super().__init__(*args, **kwargs)
 
     def get_model(self):
+        if not self.params['init_params'].get('learning_rate'):
+            self.params['init_params']['learning_rate'] = 0.01
         return catboost.CatBoostClassifier(**self.params['init_params'])
 
     def fit(self):
