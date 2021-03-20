@@ -343,23 +343,37 @@ class CVTrainer:
         trainer.fit()
         return trainer.score('val')
 
-    def save(self):
-        score = self.score('val')
-        (self
-         .predict('tst')
-         .groupby(level=0)
-         .mean()
-         .reset_index()
-         .to_csv(self.save_path.parent / f'{score:.5f}_{self.model_name}.csv', index=False)
-         )
+    def save(self, run_name='', is_final_model=True):
+        params_path = self.save_path / f'{self.model_name}_params.pkl'
 
-        (self
-         .extract_features()
-         .data.reset_index()
-         .to_csv(self.save_path / f'{self.model_name}.csv', index=False)
-         )
+        if is_final_model:
+            score = self.score('val')
+            if run_name:
+                output_name = self.save_path.parent / f'{score:.5f}_{self.model_name}_{run_name}.csv'
+            else:
+                output_name = self.save_path.parent / f'{score:.5f}_{self.model_name}.csv'
+            if not output_name.exists():
+                (self
+                 .predict('tst')
+                 .groupby(level=0)
+                 .mean()
+                 .reset_index()
+                 .to_csv(output_name, index=False)
+                 )
 
-        joblib.dump(self.params, self.save_path / f'{self.model_name}_params.pkl')
+        if run_name:
+            out_features_path = self.save_path / f'{self.model_name}_{run_name}.csv'
+        else:
+            out_features_path = self.save_path / f'{self.model_name}.csv'
+        if not out_features_path.exists():
+            (self
+             .extract_features()
+             .data.reset_index()
+             .to_csv(out_features_path, index=False)
+             )
+
+        if not params_path.exists():
+            joblib.dump(self.params, params_path)
         return self
 
     def load(self):
