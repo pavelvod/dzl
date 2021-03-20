@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from pytorch_tabnet.pretraining import TabNetPretrainer
 from pytorch_tabnet.tab_model import TabNetClassifier
-
+import sklearn.cluster
 from .base import BaseFoldClassifier
 import sklearn.preprocessing as prep
 
