@@ -40,7 +40,7 @@ def create_data_manager(data: pd.DataFrame,
         label_columns = []
 
     if cv_column not in control_df.columns:
-        control_df.add_empty_column(cv_column)
+        control_df[cv_column] = np.nan
 
     assert train_split_column in control_df.columns
     if weight_column:
