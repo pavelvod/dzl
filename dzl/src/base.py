@@ -30,8 +30,11 @@ def create_data_manager(data: pd.DataFrame,
                         categorical_features='auto',
                         cv_object=StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
                         ):
-
     _data = data.copy()
+
+    if cv_column not in _data.columns:
+        _data[cv_column] = np.nan
+
     control_df = _data.loc[:, [train_split_column]]
     label_df = _data.loc[:, label_columns]
 
@@ -40,9 +43,6 @@ def create_data_manager(data: pd.DataFrame,
 
     if label_columns is None:
         label_columns = []
-
-    if cv_column not in control_df.columns:
-        control_df[cv_column] = np.nan
 
     assert train_split_column in control_df.columns
     if weight_column:
@@ -69,7 +69,6 @@ def create_data_manager(data: pd.DataFrame,
     assert set(label_columns).issubset(label_df.columns)
 
     label_columns = [col for col in label_columns if col not in drop_columns]
-
 
     columns = feature_columns + label_columns + [cv_column, train_split_column]
 
