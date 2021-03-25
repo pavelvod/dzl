@@ -130,9 +130,9 @@ class DataManager:
                        cv_column,
                        train_split_column,
                        label_columns,
-                       drop_columns,
-                       weight_column,
-                       categorical_features,
+                       drop_columns=None,
+                       weight_column: Optional[str] = None,
+                       categorical_features='auto',
                        cv_object=StratifiedKFold(n_splits=5, shuffle=True, random_state=42)):
         return create_data_manager(data=data,
                                    cv_column=cv_column,
