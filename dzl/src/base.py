@@ -30,8 +30,10 @@ def create_data_manager(data: pd.DataFrame,
                         categorical_features='auto',
                         cv_object=StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
                         ):
-    control_df = data.loc[:, [train_split_column]]
-    label_df = data.loc[:, label_columns]
+
+    _data = data.copy()
+    control_df = _data.loc[:, [train_split_column]]
+    label_df = _data.loc[:, label_columns]
 
     if drop_columns is None:
         drop_columns = []
@@ -46,13 +48,13 @@ def create_data_manager(data: pd.DataFrame,
     if weight_column:
         assert weight_column in control_df.columns
 
-    feature_columns = [col for col in data.columns if col not in drop_columns]
+    feature_columns = [col for col in _data.columns if col not in drop_columns]
     feature_columns = [col for col in feature_columns if col not in control_df.columns]
     feature_columns = [col for col in feature_columns if col not in label_df.columns]
 
     if isinstance(categorical_features, str):
         if categorical_features == 'auto':
-            categorical_features = data.select_dtypes([object, 'category']).columns.tolist()
+            categorical_features = _data.select_dtypes([object, 'category']).columns.tolist()
         else:
             categorical_features = [categorical_features]
 
@@ -68,12 +70,13 @@ def create_data_manager(data: pd.DataFrame,
 
     label_columns = [col for col in label_columns if col not in drop_columns]
 
+
     columns = feature_columns + label_columns + [cv_column, train_split_column]
 
     if weight_column:
         columns.append(weight_column)
 
-    return DataManager(data=data.loc[:, columns],
+    return DataManager(data=_data.loc[:, columns],
                        feature_columns=feature_columns,
                        label_columns=label_columns,
                        weight_column=weight_column,
@@ -134,7 +137,7 @@ class DataManager:
                        weight_column: Optional[str] = None,
                        categorical_features='auto',
                        cv_object=StratifiedKFold(n_splits=5, shuffle=True, random_state=42)):
-        return create_data_manager(data=data,
+        return create_data_manager(_data=data,
                                    cv_column=cv_column,
                                    train_split_column=train_split_column,
                                    label_columns=label_columns,
