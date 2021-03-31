@@ -77,7 +77,8 @@ class LightGBMClassifierFoldTrainer(BaseFoldClassifier):
         fit_params.update(**self.params['fit_params'])
 
         if self.ds.weight_column:
-            fit_params['sample_weight'] = self.ds.w
+            fit_params['sample_weight'] = self.ds.train.w
+            fit_params['eval_sample_weight'] = self.ds.valid.w
 
         self.model.fit(**fit_params)
         return self
