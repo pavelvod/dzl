@@ -35,7 +35,11 @@ def create_data_manager(data: pd.DataFrame,
     if cv_column not in _data.columns:
         _data[cv_column] = np.nan
 
-    control_df = _data.loc[:, [train_split_column, cv_column]]
+    control_columns = [train_split_column, cv_column]
+    if weight_column:
+        control_columns.append(weight_column)
+
+    control_df = _data.loc[:, control_columns]
     label_df = _data.loc[:, label_columns]
 
     if drop_columns is None:
