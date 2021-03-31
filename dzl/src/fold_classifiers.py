@@ -72,13 +72,13 @@ class LightGBMClassifierFoldTrainer(BaseFoldClassifier):
         fit_params = dict(X=self.ds.train.X,
                           y=self.ds.train.y,
                           categorical_feature=self.ds.categorical_features,
-                          eval_set=[(self.ds.valid.X, self.ds.valid.y)],
+                          eval_set=dict(val=(self.ds.valid.X, self.ds.valid.y)),
                           )
         fit_params.update(**self.params['fit_params'])
 
         if self.ds.weight_column:
             fit_params['sample_weight'] = self.ds.train.w
-            fit_params['eval_sample_weight'] = self.ds.valid.w
+            fit_params['eval_sample_weight'] = dict(val=self.ds.valid.w)
 
         self.model.fit(**fit_params)
         return self
