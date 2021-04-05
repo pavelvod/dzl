@@ -21,6 +21,6 @@ setup(
     license='',
     author='Pavel Vodolazov',
     author_email='pavel.vod1@gmail.com',
-    install_requires=get_requirements()
+    install_requires=get_requirements(),
     description=''
 )
