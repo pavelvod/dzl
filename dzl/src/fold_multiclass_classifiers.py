@@ -86,12 +86,6 @@ class LightGBMMultiClassClassifierFoldTrainer(BaseFoldMultiClassClassifier):
         self.model.fit(**fit_params)
         return self
 
-    def predict(self, typ: str):
-        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X),
-                             index=self.ds[typ].X.index,
-                             columns=self.ds[typ].y.columns)
-        return preds
-
     def extract_features(self, typ: str) -> pd.DataFrame:
         return self.predict(typ=typ)
 
