@@ -17,8 +17,10 @@ from sklearn import metrics
 
 warnings.filterwarnings('ignore')
 
-scorers = dict(roc_auc_score=metrics.roc_auc_score,
-               log_loss=metrics.log_loss)
+scorers = dict(roc_auc_score=(metrics.roc_auc_score, {}),
+               log_loss=(metrics.log_loss, {}),
+               multiclass_roc_auc_score=(metrics.roc_auc_score, {'multi_class': 'ovo'})
+               )
 
 
 def create_data_manager(data: pd.DataFrame,
@@ -379,8 +381,10 @@ class CVTrainer:
     def score(self, typ: str):
         metric = self.trainers[0].metric
 
+        metric_fn, metric_args = scorers[metric]
+
         ypred, ytrue = self.predict(typ).align(self.ds.labeled.y, join='right')
-        return scorers[metric](ytrue, ypred)
+        return metric_fn(ytrue, ypred, **metric_args)
 
 
 class CVVoteTrainer(CVTrainer):
