@@ -506,6 +506,14 @@ class BaseFoldClassifier(BaseFoldTrainer):
         return preds
 
 
+class BaseFoldMultiClassClassifier(BaseFoldTrainer):
+    def predict(self, typ: str):
+        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X.values),
+                             index=self.ds[typ].X.index,
+                             columns=self.ds[typ].y.columns)
+        return preds
+
+
 class BaseFoldRegressor(BaseFoldTrainer):
     def predict(self, typ: str):
         preds = pd.DataFrame(self.model.predict(self.ds[typ].X.values),
