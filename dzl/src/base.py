@@ -514,7 +514,7 @@ class BaseFoldMultiClassClassifier(BaseFoldTrainer):
     def predict(self, typ: str):
         preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X.values),
                              index=self.ds[typ].X.index,
-                             columns=self.ds.label_columns[0].unique().tolist())
+                             columns=np.sort(self.ds.y[self.ds.label_columns[0]].unique()).tolist())
         return preds
 
 
