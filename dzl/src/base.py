@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore')
 
 scorers = dict(roc_auc_score=(metrics.roc_auc_score, {}),
                log_loss=(metrics.log_loss, {}),
-               multiclass_roc_auc_score=(metrics.roc_auc_score, {'multi_class': 'ovo'})
+               multiclass_roc_auc_score=(metrics.roc_auc_score, {'multi_class': 'ovr'})
                )
 
 
@@ -382,8 +382,8 @@ class CVTrainer:
         metric = self.trainers[0].metric
 
         metric_fn, metric_args = scorers[metric]
-
-        ypred, ytrue = self.predict(typ).align(self.ds.labeled.y, join='right')
+        ypred = self.predict(typ).sort_index()
+        ytrue = self.ds.labeled.y.sort_index()
         return metric_fn(ytrue, ypred, **metric_args)
 
 
@@ -515,7 +515,7 @@ class BaseFoldMultiClassClassifier(BaseFoldTrainer):
         preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X),
                              index=self.ds[typ].X.index,
                              columns=np.sort(self.ds.y[self.ds.label_columns[0]].unique()).tolist())
-        return preds
+        return preds.sort_index()
 
 
 class BaseFoldRegressor(BaseFoldTrainer):
