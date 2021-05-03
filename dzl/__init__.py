@@ -2,4 +2,3 @@ from .src import SklearnClassifierFoldTrainer, TabNetFoldTrainer, XGBoostClassif
     LightGBMClassifierFoldTrainer, CatboostClassifierFoldTrainer, LGBMOptunaOptimizer, CatBoostOptunaOptimizer, \
     XGBoostOptunaOptimizer, LogRegOptunaOptimizer, HistGradientBoostingOptunaOptimizer, TabNetOptunaOptimizer, \
     LightGBMRegressorFoldTrainer
-from .src import BaseCVClassifierWrapper, LGBMCVClassifierWrapper
