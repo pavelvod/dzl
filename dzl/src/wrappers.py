@@ -47,3 +47,12 @@ class BaseCVClassifierWrapper:
         for model in self.models:
             oof += self._predict_proba(model, X, *args, **kwargs) / self.cv_obj.n_splits
         return oof
+
+
+class LGBMCVClassifierWrapper(BaseCVClassifierWrapper):
+
+    def _fit(self, model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
+        model.fit(x_trn, y_trn,
+                  eval_set=[(x_trn, y_trn), (x_val, y_val)],
+                  *args, **kwargs)
+        return self
