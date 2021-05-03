@@ -4,4 +4,4 @@ from .optuna_classifiers import LGBMOptunaOptimizer, CatBoostOptunaOptimizer, XG
     LogRegOptunaOptimizer, HistGradientBoostingOptunaOptimizer, TabNetOptunaOptimizer
 from .fold_regressors import LightGBMRegressorFoldTrainer
 
-from dzl.src.tmp import BaseCVClassifierWrapper, LGBMCVClassifierWrapper
+from dzl.src.wrappers import BaseCVClassifierWrapper, LGBMCVClassifierWrapper
