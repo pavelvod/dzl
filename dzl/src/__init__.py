@@ -3,3 +3,5 @@ from .fold_classifiers import SklearnClassifierFoldTrainer, TabNetFoldTrainer, X
 from .optuna_classifiers import LGBMOptunaOptimizer, CatBoostOptunaOptimizer, XGBoostOptunaOptimizer, \
     LogRegOptunaOptimizer, HistGradientBoostingOptunaOptimizer, TabNetOptunaOptimizer
 from .fold_regressors import LightGBMRegressorFoldTrainer
+
+from .wrappers import BaseCVClassifierWrapper, LGBMCVClassifierWrapper
