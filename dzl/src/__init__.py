@@ -4,4 +4,4 @@ from .optuna_classifiers import LGBMOptunaOptimizer, CatBoostOptunaOptimizer, XG
     LogRegOptunaOptimizer, HistGradientBoostingOptunaOptimizer, TabNetOptunaOptimizer
 from .fold_regressors import LightGBMRegressorFoldTrainer
 
-from .wrappers import BaseCVWrapper, LGBMCVClassifierWrapper, SklearnClassifierCV, SimpleDenseClassifierCV
+from .wrappers import ModelClassifierCV
