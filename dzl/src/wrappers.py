@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 
 
@@ -31,7 +33,12 @@ class BaseCVWrapper:
 
     # any task
     def _fit(self, model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
-        model.fit(x_trn, y_trn, *args, **kwargs)
+        if 'eval_set' in inspect.getfullargspec(model.fit).args:
+            model.fit(x_trn, y_trn,
+                      eval_set=[(x_val, y_val)],
+                      *args, **kwargs)
+        else:
+            model.fit(x_trn, y_trn, *args, **kwargs)
         return self
 
     def fit(self, X, y, *args, **kwargs):
@@ -91,26 +98,5 @@ class BaseCVWrapper:
         return oof
 
 
-class LGBMCVClassifierWrapper(BaseCVWrapper):
-
-    def _fit(self, model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
-        model.fit(x_trn, y_trn,
-                  eval_set=[(x_trn, y_trn), (x_val, y_val)],
-                  *args, **kwargs)
-        return self
-
-
-class SimpleDenseClassifierCV(BaseCVWrapper):
-
-    def _fit(self, model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
-        model.fit(x_trn, y_trn,
-                  eval_set=[(x_val, y_val)],
-                  *args, **kwargs)
-        return self
-
-
-class SklearnClassifierCV(BaseCVWrapper):
-
-    def _fit(self, model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
-        model.fit(x_trn, y_trn, *args, **kwargs)
-        return self
+class ModelClassifierCV(BaseCVWrapper):
+    pass
