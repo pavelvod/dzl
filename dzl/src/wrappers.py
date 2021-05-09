@@ -23,11 +23,12 @@ class BaseCVWrapper:
         assert self.task in self.tasks
         self.cv_obj = cv_obj
         self.model_params = model_params
-        self.models = [model_cls(**self.model_params) for fold_id in range(self.cv_obj.n_splits)]
+        self.fold_models = [model_cls(**self.model_params) for fold_id in range(self.cv_obj.n_splits)]
         if self.task == 'classification':
             self._classes = None
 
         self.__fitted = False
+        self.callbacks = []
 
     # utils
     def generate_folds(self, X, y):
@@ -37,70 +38,99 @@ class BaseCVWrapper:
             yield fold_id, trn_idx, val_idx, x_trn, y_trn, x_val, y_val
 
     # any task
-    def _fit(self, model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
-        if 'eval_set' in inspect.getfullargspec(model.fit).args:
-            model.fit(x_trn, y_trn,
-                      eval_set=[(x_val, y_val)],
-                      *args, **kwargs)
+    def _fit(self, fold_model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
+        for callback in self.callbacks:
+            fold_model, x_trn, y_trn, x_val, y_val = callback.on_before_fit(fold_model, x_trn, y_trn, x_val, y_val,
+                                                                            *args,
+                                                                            **kwargs)
+        if 'eval_set' in inspect.getfullargspec(fold_model.fit).args:
+            fold_model.fit(x_trn, y_trn,
+                           eval_set=[(x_val, y_val)],
+                           *args, **kwargs)
         else:
-            model.fit(x_trn, y_trn, *args, **kwargs)
+            fold_model.fit(x_trn, y_trn, *args, **kwargs)
+        for callback in self.callbacks:
+            fold_model, x_trn, y_trn, x_val, y_val = callback.on_after_fit(fold_model, x_trn, y_trn, x_val, y_val,
+                                                                           *args,
+                                                                           **kwargs)
         return self
 
     def fit(self, X, y, *args, **kwargs):
         if self.task == 'classification':
             self._classes = np.unique(y)
         for fold_id, trn_idx, val_idx, x_trn, y_trn, x_val, y_val in self.generate_folds(X, y):
-            self._fit(self.models[fold_id], x_trn, y_trn, x_val, y_val, *args, **kwargs)
+            self._fit(self.fold_models[fold_id], x_trn, y_trn, x_val, y_val, *args, **kwargs)
         return self
 
     # classification
-    def _predict_proba(self, model, X, *args, **kwargs):
-        return model.predict_proba(X, *args, **kwargs)
+    def _predict_proba(self, fold_model, X, *args, **kwargs):
+        return fold_model.predict_proba(X, *args, **kwargs)
 
-    def predict_proba_trn(self, X, y, *args, **kwargs):
+    def _predict_proba_trn(self, X, y, *args, **kwargs):
         assert self.task == 'classification'
         oof = np.zeros(shape=(X.index.size, len(self._classes)))
         for fold_id, trn_idx, val_idx, x_trn, y_trn, x_val, y_val in self.generate_folds(X, y):
-            oof[trn_idx, :] += self._predict_proba(self.models[fold_id], x_trn, *args, **kwargs) / (
+            oof[trn_idx, :] += self._predict_proba(self.fold_models[fold_id], x_trn, *args, **kwargs) / (
                     self.cv_obj.n_splits - 1)
         return oof
 
-    def predict_proba_val(self, X, y, *args, **kwargs):
+    def _predict_proba_val(self, X, y, *args, **kwargs):
         assert self.task == 'classification'
         oof = np.zeros(shape=(X.index.size, len(self._classes)))
         for fold_id, trn_idx, val_idx, x_trn, y_trn, x_val, y_val in self.generate_folds(X, y):
-            oof[val_idx, :] = self._predict_proba(self.models[fold_id], x_val, *args, **kwargs)
+            oof[val_idx, :] = self._predict_proba(self.fold_models[fold_id], x_val, *args, **kwargs)
         return oof
 
     def predict_proba(self, X, *args, **kwargs):
         assert self.task == 'classification'
         oof = np.zeros(shape=(X.index.size, len(self._classes)))
-        for model in self.models:
-            oof += self._predict_proba(model, X, *args, **kwargs) / self.cv_obj.n_splits
+        for fold_model in self.fold_models:
+            oof += self._predict_proba(fold_model, X, *args, **kwargs) / self.cv_obj.n_splits
         return oof
 
     # classification
-    def _predict(self, model, X, *args, **kwargs):
-        return model.predict(X, *args, **kwargs)
+    def _predict(self, fold_model, X, *args, **kwargs):
+        for callback in self.callbacks:
+            fold_model, X = callback.on_before_predict(fold_model, X, *args, **kwargs)
+        results = fold_model.predict(X, *args, **kwargs)
 
-    def predict_trn(self, X, y, *args, **kwargs):
+        for callback in self.callbacks:
+            fold_model, X, results = callback.on_before_predict(fold_model, X, results, *args, **kwargs)
+
+        return results
+
+    def _predict_trn(self, X, y, *args, **kwargs):
         oof = np.zeros(shape=X.index.size)
         for fold_id, trn_idx, val_idx, x_trn, y_trn, x_val, y_val in self.generate_folds(X, y):
-            oof[trn_idx, :] += self._predict(self.models[fold_id], x_trn, *args, **kwargs) / (
+            oof[trn_idx] += self._predict(self.fold_models[fold_id], x_trn, *args, **kwargs) / (
                     self.cv_obj.n_splits - 1)
         return oof
 
-    def predict_val(self, X, y, *args, **kwargs):
+    def _predict_val(self, X, y, *args, **kwargs):
         oof = np.zeros(shape=X.index.size)
         for fold_id, trn_idx, val_idx, x_trn, y_trn, x_val, y_val in self.generate_folds(X, y):
-            oof[val_idx, :] = self._predict(self.models[fold_id], x_val, *args, **kwargs)
+            oof[val_idx] = self._predict(self.fold_models[fold_id], x_val, *args, **kwargs)
         return oof
 
     def predict(self, X, *args, **kwargs):
         oof = np.zeros(shape=X.index.size)
-        for model in self.models:
-            oof += self._predict(model, X, *args, **kwargs) / self.cv_obj.n_splits
+        for fold_model in self.fold_models:
+            oof += self._predict(fold_model, X, *args, **kwargs) / self.cv_obj.n_splits
         return oof
+
+
+class BaseCallback:
+    def on_before_fit(self, fold_model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
+        return fold_model, x_trn, y_trn, x_val, y_val
+
+    def on_after_fit(self, fold_model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
+        return fold_model, x_trn, y_trn, x_val, y_val
+
+    def on_before_predict(self, fold_model, X, *args, **kwargs):
+        return fold_model, X
+
+    def on_after_predict(self, fold_model, X, results, *args, **kwargs):
+        return fold_model, X, results
 
 
 class ModelClassifierCV(BaseCVWrapper):
