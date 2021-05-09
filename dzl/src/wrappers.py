@@ -1,6 +1,7 @@
 import inspect
 
 import numpy as np
+from sklearn.model_selection import StratifiedKFold
 
 
 def generate_folds(cv_obj, X, y):
@@ -13,7 +14,11 @@ def generate_folds(cv_obj, X, y):
 class BaseCVWrapper:
     tasks = ['regression', 'classification']
 
-    def __init__(self, model_cls, model_params, cv_obj, task='classification', *args, **kwargs):
+    def __init__(self,
+                 model_cls,
+                 model_params,
+                 cv_obj=StratifiedKFold(n_splits=5, random_state=42, shuffle=True),
+                 task='classification', *args, **kwargs):
         self.task = task
         assert self.task in self.tasks
         self.cv_obj = cv_obj
