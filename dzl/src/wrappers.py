@@ -107,7 +107,7 @@ class BaseCVWrapper:
         oof = np.zeros(shape=X.index.size)
         lst_models = self.fold_models_flatten()
         for fold_model in lst_models:
-            oof += self._predict(fold_model, X, *args, **kwargs) / (len(lst_models))
+            oof += self._predict_proba(fold_model, X, *args, **kwargs) / (len(lst_models))
         return oof
 
     # classification
