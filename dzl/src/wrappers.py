@@ -197,9 +197,9 @@ class OOFValidCallback(BaseCallback):
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         if self.task == Task.Regression:
-            self.oof[val_idx] = fold_model.predict(x_val) / self.n_seeds
+            self.oof[val_idx] += fold_model.predict(x_val) / self.n_seeds
         if self.task == Task.Classification:
-            self.oof[val_idx, :] = fold_model.predict_proba(x_val) / self.n_seeds
+            self.oof[val_idx, :] += fold_model.predict_proba(x_val) / self.n_seeds
         return
 
 
@@ -213,11 +213,6 @@ class FoldMetricCallback(BaseCallback):
     def on_before_fit(self, model, X, y, *args, **kwargs):
         self.task = Task.Classification if 'predict_proba' in dir(model.model_cls) else Task.Regression
         self.n_seeds = len(model.seeds)
-
-        if self.task == Task.Regression:
-            self.oof = np.zeros(shape=X.shape[0])
-        if self.task == Task.Classification:
-            self.oof = np.zeros(shape=(X.shape[0], y.nunique()))
         return X, y
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
