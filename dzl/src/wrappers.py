@@ -1,5 +1,6 @@
 import inspect
 from collections import defaultdict
+from functools import reduce
 from typing import Optional
 
 import numpy as np
@@ -135,10 +136,14 @@ class BaseCVWrapper:
     #         oof[val_idx] = self._predict(self.fold_models[fold_id], x_val, *args, **kwargs)
     #     return oof
 
+    def fold_models_flatten(self):
+        return reduce(lambda x, y: x + y, [list(d.values()) for d in self.fold_models.values()])
+
     def predict(self, X, *args, **kwargs):
         oof = np.zeros(shape=X.index.size)
-        for fold_model in self.fold_models:
-            oof += self._predict(fold_model, X, *args, **kwargs) / (len(self.fold_models))
+        lst_models = self.fold_models_flatten()
+        for fold_model in lst_models:
+            oof += self._predict(fold_model, X, *args, **kwargs) / (len(lst_models))
         return oof
 
 
