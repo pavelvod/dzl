@@ -30,7 +30,7 @@ class BaseCVWrapper:
         assert self.task in self.tasks
         self.n_folds: int = n_folds
         self.cv_params: dict = cv_params
-        self.seeds: list = seeds
+        self.seeds: list = seeds or [42]
         self.model_params: dict = model_params
         self.model_cls = model_cls
         self.cv_cls = cv_cls
