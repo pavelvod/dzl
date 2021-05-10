@@ -104,10 +104,10 @@ class BaseCVWrapper:
     #     return oof
 
     def predict_proba(self, X, *args, **kwargs):
-        assert self.task == 'classification'
-        oof = np.zeros(shape=(X.index.size, len(self._classes)))
-        for fold_model in self.fold_models:
-            oof += self._predict_proba(fold_model, X, *args, **kwargs) / (len(self.fold_models))
+        oof = np.zeros(shape=X.index.size)
+        lst_models = self.fold_models_flatten()
+        for fold_model in lst_models:
+            oof += self._predict(fold_model, X, *args, **kwargs) / (len(lst_models))
         return oof
 
     # classification
