@@ -123,7 +123,7 @@ class ModelClassifierCV(BaseCVWrapper):
         return out
 
     def predict_proba(self, X, *args, **kwargs):
-        oof = np.zeros(shape=X.index.size)
+        oof = np.zeros(shape=(X.index.size, len(self._classes)))
         lst_models = self.fold_models_flatten()
         for fold_model in lst_models:
             oof += self._predict_proba(fold_model, X, *args, **kwargs) / (len(lst_models))
@@ -217,3 +217,4 @@ class FoldMetricCallback(BaseCallback):
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         print({metric.__name__: metric(y_val, fold_model.predict_proba(x_val)[:, 1]) for metric in self.metric_list})
+
