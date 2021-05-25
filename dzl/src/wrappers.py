@@ -49,7 +49,10 @@ class BaseCVWrapper:
     # utils
     def get_cv_obj(self, seed):
         lst_of_param_names = inspect.getfullargspec(self.cv_cls.__init__).args
-        cv_params = copy.deepcopy(self.cv_params)
+        if self.cv_params:
+            cv_params = copy.deepcopy(self.cv_params)
+        else:
+            cv_params = dict()
         cv_params['n_splits'] = self.n_folds
         if 'random_state' in lst_of_param_names:
             cv_params['random_state'] = seed
