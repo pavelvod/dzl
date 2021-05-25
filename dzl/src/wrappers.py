@@ -1,3 +1,4 @@
+import copy
 import inspect
 from collections import defaultdict
 from functools import reduce
@@ -47,9 +48,15 @@ class BaseCVWrapper:
 
     # utils
     def get_cv_obj(self, seed):
-        cv_params = self.cv_params or dict(shuffle=True)
+        lst_of_param_names = inspect.getfullargspec(self.cv_cls.__init__).args
+        cv_params = copy.deepcopy(self.cv_params)
         cv_params['n_splits'] = self.n_folds
-        cv_params['random_state'] = seed
+        if 'random_state' in lst_of_param_names:
+            cv_params['random_state'] = seed
+
+        if 'shuffle' in lst_of_param_names:
+            cv_params['shuffle'] = True
+
         return self.cv_cls(**cv_params)
 
     def generate_folds(self, X, y):
@@ -217,4 +224,3 @@ class FoldMetricCallback(BaseCallback):
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         print({metric.__name__: metric(y_val, fold_model.predict_proba(x_val)[:, 1]) for metric in self.metric_list})
-
