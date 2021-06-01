@@ -229,3 +229,19 @@ class FoldMetricCallback(BaseCallback):
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         print({metric.__name__: metric(y_val, fold_model.predict_proba(x_val)[:, 1]) for metric in self.metric_list})
+
+
+class FoldMultiClassMetricCallback(BaseCallback):
+    def __init__(self, metric_list: list):
+        super().__init__()
+        self.metric_list = metric_list
+        self.n_seeds = None
+        self.task = None
+
+    def on_before_fit(self, model, X, y, *args, **kwargs):
+        self.task = Task.Classification if 'predict_proba' in dir(model.model_cls) else Task.Regression
+        self.n_seeds = len(model.seeds)
+        return X, y
+
+    def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
+        print({metric.__name__: metric(y_val, fold_model.predict_proba(x_val)) for metric in self.metric_list})

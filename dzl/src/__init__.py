@@ -5,4 +5,4 @@ from .optuna_classifiers import LGBMOptunaOptimizer, CatBoostOptunaOptimizer, XG
 from .fold_regressors import LightGBMRegressorFoldTrainer
 
 from .wrappers import ModelClassifierCV, ModelRegressorCV, BaseCallback, BaseCVWrapper, FoldMetricCallback, \
-    OOFValidCallback
+    OOFValidCallback, FoldMultiClassMetricCallback

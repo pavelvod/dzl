@@ -2,4 +2,4 @@ from .src import SklearnClassifierFoldTrainer, TabNetFoldTrainer, XGBoostClassif
     LightGBMClassifierFoldTrainer, CatboostClassifierFoldTrainer, LGBMOptunaOptimizer, CatBoostOptunaOptimizer, \
     XGBoostOptunaOptimizer, LogRegOptunaOptimizer, HistGradientBoostingOptunaOptimizer, TabNetOptunaOptimizer, \
     LightGBMRegressorFoldTrainer, ModelClassifierCV, ModelRegressorCV, BaseCallback, BaseCVWrapper, \
-    FoldMetricCallback, OOFValidCallback
+    FoldMetricCallback, OOFValidCallback, FoldMultiClassMetricCallback
