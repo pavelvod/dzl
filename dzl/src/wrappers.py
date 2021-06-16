@@ -24,14 +24,17 @@ class BaseCVWrapper:
     def __init__(self,
                  model_cls,
                  model_params,
+                 fit_params: Optional[dict] = None,
                  cv_cls=None,
                  n_folds: int = 5,
                  cv_params: Optional[dict] = None,
                  seeds: Optional[list] = None,
                  callbacks: Optional[list] = None,
                  groups=None,
+
                  *args, **kwargs):
         self.n_folds: int = n_folds
+        self.fit_params: dict = fit_params or {}
         self.cv_params: dict = cv_params
         self.seeds: list = seeds or [42]
         self.model_params: dict = model_params
@@ -76,10 +79,13 @@ class BaseCVWrapper:
         return reduce(lambda x, y: x + y, [list(d.values()) for d in self.fold_models.values()])
 
     def __fit(self, fold_model, x_trn, y_trn, x_val, y_val, *args, **kwargs):
+        for k, v in kwargs.items():
+            self.fit_params[k] = v
+
         if 'eval_set' in inspect.getfullargspec(fold_model.fit).args:
             fold_model.fit(x_trn, y_trn,
                            eval_set=[(x_val, y_val)],
-                           *args, **kwargs)
+                           **self.fit_params)
         else:
             fold_model.fit(x_trn, y_trn, *args, **kwargs)
 
