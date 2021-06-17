@@ -4,7 +4,6 @@ from collections import defaultdict
 from functools import reduce
 from typing import Optional
 import numpy as np
-from sklearn import metrics
 from sklearn.model_selection import StratifiedKFold, KFold
 
 
