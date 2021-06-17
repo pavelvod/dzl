@@ -5,9 +5,6 @@ import namegenerator
 import optuna
 import torch
 
-from .base import CVTrainer
-from .fold_classifiers import LightGBMClassifierFoldTrainer, CatboostClassifierFoldTrainer, TabNetFoldTrainer, \
-    XGBoostClassifierFoldTrainer, SklearnClassifierFoldTrainer
 
 
 class OptunaOptimizer:

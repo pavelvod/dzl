@@ -1,4 +1,4 @@
-from dzl.src.utils import Task
+from dzl.utils import Task
 import numpy as np
 import pandas as pd
 

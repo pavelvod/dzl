@@ -1,3 +1,3 @@
-from .src import ModelClassifierCV, ModelRegressorCV, BaseCVWrapper
+from .base import ModelClassifierCV, ModelRegressorCV, BaseCVWrapper
 
-from .src import callbacks
+from . import callbacks
