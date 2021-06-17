@@ -2,7 +2,7 @@ from typing import Optional
 import pandas as pd
 from sklearn import metrics
 
-from dzl import ModelClassifierCV
+from .base import ModelClassifierCV
 from .callbacks import OOFValidCallback, FoldMetricCallback
 
 
