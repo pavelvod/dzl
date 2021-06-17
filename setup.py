@@ -1,5 +1,6 @@
 from setuptools import setup
 
+
 def get_requirements():
     """
     lists the requirements to install.
@@ -13,10 +14,11 @@ def get_requirements():
             requirements = f.read().splitlines()
     return requirements
 
+
 setup(
     name='dzl',
-    version='0.2',
-    packages=['dzl', 'dzl.src'],
+    version='0.3',
+    packages=['dzl'],
     url='',
     license='',
     author='Pavel Vodolazov',
