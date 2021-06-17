@@ -3,8 +3,7 @@ import pandas as pd
 from sklearn import metrics
 
 from dzl import ModelClassifierCV
-from dzl.callbacks import (OOFValidCallback,
-                           FoldMetricCallback)
+from .callbacks import OOFValidCallback, FoldMetricCallback
 
 
 class AdversarialValidator:
