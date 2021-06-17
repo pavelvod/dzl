@@ -1,2 +1,3 @@
-from .wrappers import ModelClassifierCV, ModelRegressorCV, BaseCallback, BaseCVWrapper, FoldMetricCallback, \
-    OOFValidCallback, FoldMultiClassMetricCallback
+from .wrappers import ModelClassifierCV, ModelRegressorCV, BaseCVWrapper
+
+from .callbacks import FoldMetricCallback, OOFValidCallback

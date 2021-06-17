@@ -4,5 +4,11 @@ xgboost
 pytorch_tabnet
 dataclasses
 category_encoders
-namegenerator
-optuna
+namegenerator~=1.0.6
+optuna~=2.6.0
+
+numpy~=1.18.5
+sklearn~=0.0
+scikit-learn~=0.23.1
+torch~=1.6.0+cpu
+setuptools~=54.1.1

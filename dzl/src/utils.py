@@ -1,3 +1,9 @@
+from enum import Enum
+
+
+class Task(Enum):
+    Classification = 0
+    Regression = 1
 
 
 def generate_folds(cv_obj, X, y):
