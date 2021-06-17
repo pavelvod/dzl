@@ -15,12 +15,12 @@ def get_requirements():
 
 setup(
     name='dzl',
-    version='0.1',
+    version='0.2',
     packages=['dzl', 'dzl.src'],
     url='',
     license='',
     author='Pavel Vodolazov',
     author_email='pavel.vod1@gmail.com',
-    install_requires=get_requirements()
+    install_requires=get_requirements(),
     description=''
 )

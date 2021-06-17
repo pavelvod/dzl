@@ -17,48 +17,13 @@ from sklearn import metrics
 
 warnings.filterwarnings('ignore')
 
-scorers = dict(roc_auc_score=metrics.roc_auc_score,
-               log_loss=metrics.log_loss)
+scorers = dict(roc_auc_score=(metrics.roc_auc_score, {}),
+               log_loss=(metrics.log_loss, {}),
+               multiclass_roc_auc_score=(metrics.roc_auc_score, {'multi_class': 'ovr'})
+               )
 
 
-class DataBlock:
-    def __init__(self, index: list, data: pd.DataFrame):
-        if len(set(index) - set(data.columns)) == len(set(index)):
-            assert data.index.names == index
-
-        if len(set(index) - set(data.columns)) == 0:
-            data = data.set_index(index)
-
-        self.data: pd.DataFrame = data
-        self.columns = self.data.columns.tolist()
-
-    def validate_add(self, other):
-        assert type(self) == type(other)
-        assert len(set(self.data.index).intersection(other.data.index)) == len(self.data.index)
-        assert self.data.index.size == other.data.index.size
-        assert len(set(self.data.columns).intersection(other.data.columns)) == 0
-
-    def __add__(self, other):
-        self.validate_add(other)
-        return self.__class__(index=list(self.data.index.names),
-                              data=self.data.merge(other.data, left_index=True, right_index=True))
-
-    def split(self, column_names):
-        assert set(self.columns).issuperset(set(column_names)), f'{column_names}'
-        remain_columns = [col for col in self.columns if col not in column_names]
-        return self.__class__(self.data[remain_columns]), self.__class__(self.data[column_names])
-
-    def transform(self, model):
-        return self.__class__(pd.DataFrame(model.transform(self.data),
-                                           columns=self.data.columns,
-                                           index=self.data.index))
-
-    def add_empty_column(self, column_name):
-        self.data = self.data.assign(**{column_name: np.nan})
-        return self
-
-
-def create_data_manager(data_block: DataBlock,
+def create_data_manager(data: pd.DataFrame,
                         cv_column: str,
                         train_split_column: str,
                         label_columns: list,
@@ -67,8 +32,17 @@ def create_data_manager(data_block: DataBlock,
                         categorical_features='auto',
                         cv_object=StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
                         ):
-    feature_block, control_block = data_block.split([train_split_column])
-    feature_block, label_block = feature_block.split(label_columns)
+    _data = data.copy()
+
+    if cv_column not in _data.columns:
+        _data[cv_column] = np.nan
+
+    control_columns = [train_split_column, cv_column]
+    if weight_column:
+        control_columns.append(weight_column)
+
+    control_df = _data.loc[:, control_columns]
+    label_df = _data.loc[:, label_columns]
 
     if drop_columns is None:
         drop_columns = []
@@ -76,20 +50,17 @@ def create_data_manager(data_block: DataBlock,
     if label_columns is None:
         label_columns = []
 
-    if cv_column not in control_block.columns:
-        control_block.add_empty_column(cv_column)
-
-    assert train_split_column in control_block.columns
+    assert train_split_column in control_df.columns
     if weight_column:
-        assert weight_column in control_block.columns
+        assert weight_column in control_df.columns
 
-    feature_columns = [col for col in data_block.columns if col not in drop_columns]
-    feature_columns = [col for col in feature_columns if col not in control_block.columns]
-    feature_columns = [col for col in feature_columns if col not in label_block.columns]
+    feature_columns = [col for col in _data.columns if col not in drop_columns]
+    feature_columns = [col for col in feature_columns if col not in control_df.columns]
+    feature_columns = [col for col in feature_columns if col not in label_df.columns]
 
     if isinstance(categorical_features, str):
         if categorical_features == 'auto':
-            categorical_features = data_block.data.select_dtypes([object, 'category']).columns.tolist()
+            categorical_features = _data.select_dtypes([object, 'category']).columns.tolist()
         else:
             categorical_features = [categorical_features]
 
@@ -99,26 +70,23 @@ def create_data_manager(data_block: DataBlock,
     assert len(missing_categorical_columns) > 0, f'categorical_features {missing_categorical_columns} are missed'
 
     if len(label_columns) == 0:
-        label_columns = label_block.columns
+        label_columns = label_df.columns
 
-    assert set(label_columns).issubset(label_block.columns)
+    assert set(label_columns).issubset(label_df.columns)
 
     label_columns = [col for col in label_columns if col not in drop_columns]
-
-    data_block: DataBlock = feature_block + label_block + control_block
 
     columns = feature_columns + label_columns + [cv_column, train_split_column]
 
     if weight_column:
         columns.append(weight_column)
-    data = data_block.data.loc[:, columns]
-    return DataManager(data=data,
+
+    return DataManager(data=_data.loc[:, columns],
                        feature_columns=feature_columns,
                        label_columns=label_columns,
                        weight_column=weight_column,
                        cv_column=cv_column,
                        train_split_column=train_split_column,
-                       inverse_cv=False,
                        categorical_features=categorical_features
                        ).set_new_cv(cv_object)
 
@@ -153,7 +121,6 @@ class DataManager:
                  train_split_column: str,
                  categorical_features: list,
                  weight_column: Optional[str] = None,
-                 inverse_cv: bool = False
                  ):
         self.data = data
         self.index_columns = list(data.index.names)
@@ -165,7 +132,24 @@ class DataManager:
         self.categorical_features = categorical_features
         self.__active_fold = -1
 
-        self.inverse_cv: bool = inverse_cv
+    @classmethod
+    def from_dataframe(cls,
+                       data,
+                       cv_column,
+                       train_split_column,
+                       label_columns,
+                       drop_columns=None,
+                       weight_column: Optional[str] = None,
+                       categorical_features='auto',
+                       cv_object=StratifiedKFold(n_splits=5, shuffle=True, random_state=42)):
+        return create_data_manager(data=data,
+                                   cv_column=cv_column,
+                                   train_split_column=train_split_column,
+                                   label_columns=label_columns,
+                                   drop_columns=drop_columns,
+                                   weight_column=weight_column,
+                                   categorical_features=categorical_features,
+                                   cv_object=cv_object)
 
     @property
     def labeled_mask(self):
@@ -381,14 +365,12 @@ class CVTrainer:
             trainer.load()
         return self
 
-    def extract_features(self) -> DataBlock:
+    def extract_features(self) -> pd.DataFrame:
         index = self.ds.index_columns
         data = pd.concat([self.predict('val'),
                           self.predict('tst').groupby(level=index).mean()])
         data.columns = [f'{self.model_name}__{column}' for column in data.columns]
-        return DataBlock(index=index,
-                         data=data
-                         )
+        return data
 
     def predict(self, typ: str):
         results = []
@@ -399,19 +381,19 @@ class CVTrainer:
     def score(self, typ: str):
         metric = self.trainers[0].metric
 
-        ypred, ytrue = self.predict(typ).align(self.ds.labeled.y, join='right')
-        return scorers[metric](ytrue, ypred)
+        metric_fn, metric_args = scorers[metric]
+        ypred = self.predict(typ).sort_index()
+        ytrue = self.ds.labeled.y.sort_index()
+        return metric_fn(ytrue, ypred, **metric_args)
 
 
 class CVVoteTrainer(CVTrainer):
-    def extract_features(self) -> DataBlock:
+    def extract_features(self) -> pd.DataFrame:
         index = self.ds.index_columns
         data = pd.concat([self.predict('val'),
                           self.predict('tst').groupby(level=index).agg(lambda x: x.value_counts().index[0])])
         data.columns = [f'{self.model_name}__{column}' for column in data.columns]
-        return DataBlock(index=index,
-                         data=data
-                         )
+        return data
 
 
 class Callback:
@@ -526,6 +508,14 @@ class BaseFoldClassifier(BaseFoldTrainer):
                              index=self.ds[typ].X.index,
                              columns=self.ds[typ].y.columns)
         return preds
+
+
+class BaseFoldMultiClassClassifier(BaseFoldTrainer):
+    def predict(self, typ: str):
+        preds = pd.DataFrame(self.model.predict_proba(self.ds[typ].X),
+                             index=self.ds[typ].X.index,
+                             columns=np.sort(self.ds.y[self.ds.label_columns[0]].unique()).tolist())
+        return preds.sort_index()
 
 
 class BaseFoldRegressor(BaseFoldTrainer):
