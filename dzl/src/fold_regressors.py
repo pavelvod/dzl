@@ -34,7 +34,6 @@ class LightGBMRegressorFoldTrainer(BaseFoldRegressor):
     def extract_features(self, typ: str) -> pd.DataFrame:
         return self.predict(typ=typ)
 
-
 class SklearnClassifierFoldTrainer(BaseFoldRegressor):
 
     def __init__(self, *args, **kwargs):
