@@ -158,3 +158,4 @@ class ModelRegressorCV(BaseCVWrapper):
         for fold_model in lst_models:
             oof += self._predict(fold_model, X, *args, **kwargs) / (len(lst_models))
         return oof
+
