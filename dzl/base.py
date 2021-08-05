@@ -109,8 +109,27 @@ class BaseCVWrapper:
 
 class ModelClassifierCV(BaseCVWrapper):
 
-    def __init__(self, return_logits: bool = False, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,
+                 model_cls,
+                 model_params,
+                 fit_params: Optional[dict] = None,
+                 cv_cls=None,
+                 n_folds: int = 5,
+                 cv_params: Optional[dict] = None,
+                 seeds: Optional[list] = None,
+                 callbacks: Optional[list] = None,
+                 groups=None,
+                 return_logits: bool = False, *args, **kwargs):
+        super().__init__(model_cls=model_cls,
+                         model_params=model_params,
+                         fit_params=fit_params,
+                         cv_cls=cv_cls,
+                         n_folds=n_folds,
+                         cv_params=cv_params,
+                         seeds=seeds,
+                         callbacks=callbacks,
+                         groups=groups,
+                         *args, **kwargs)
         self._classes = None
         self.return_logits = return_logits
         self.eps = 1e-8
@@ -158,4 +177,3 @@ class ModelRegressorCV(BaseCVWrapper):
         for fold_model in lst_models:
             oof += self._predict(fold_model, X, *args, **kwargs) / (len(lst_models))
         return oof
-
