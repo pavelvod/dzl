@@ -106,7 +106,7 @@ class BaseCVWrapper:
                                                                                                *args,
                                                                                                **kwargs)
 
-            fold_model = self.__fit(fold_model, x_trn, y_trn, x_val, y_val, w_trn, w_val, *args, **kwargs)
+            fold_model = self.__fit(fold_model, x_trn, y_trn, w_trn, x_val, y_val, w_val, *args, **kwargs)
 
             for callback in self.callbacks:
                 callback.on_after_fold_fit(self, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args,
