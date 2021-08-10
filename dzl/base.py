@@ -155,7 +155,7 @@ class ModelClassifierCV(BaseCVWrapper):
         self.return_logits = return_logits
         self.eps = 1e-8
 
-    def fit(self, X, y, sample_weight, *args, **kwargs):
+    def fit(self, X, y, sample_weight=None, *args, **kwargs):
         self._classes = np.unique(y)
         super().fit(X, y, sample_weight, *args, **kwargs)
         return self
