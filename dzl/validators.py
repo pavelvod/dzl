@@ -2,7 +2,7 @@ from typing import Optional
 import pandas as pd
 from sklearn import metrics
 
-from .base import ModelClassifierCV
+from .base import DZLClassifier
 from .callbacks import OOFValidCallback, FoldMetricCallback
 
 
@@ -23,7 +23,7 @@ class AdversarialValidator:
         callbacks.append(oof_clbk)
         if self.verbose:
             callbacks.append(FoldMetricCallback(metric_list=[self.score_fn]))
-        self.adv_model = ModelClassifierCV(**self.model_cv_params, callbacks=callbacks)
+        self.adv_model = DZLClassifier(**self.model_cv_params, callbacks=callbacks)
         self.adv_model.fit(X_adv, y_adv)
         self.score = self.score_fn(y_adv, oof_clbk.oof[:, 1])
         return self

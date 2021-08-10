@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold, KFold
 
 
-class BaseCVWrapper:
+class DZLWrapper:
     def __init__(self,
                  model_cls,
                  model_params,
@@ -128,7 +128,7 @@ class BaseCVWrapper:
         return self
 
 
-class ModelClassifierCV(BaseCVWrapper):
+class DZLClassifier(DZLWrapper):
 
     def __init__(self,
                  model_cls,
@@ -178,7 +178,7 @@ class ModelClassifierCV(BaseCVWrapper):
         return self.predict_proba(X, *args, **kwargs).argmax(1)
 
 
-class ModelRegressorCV(BaseCVWrapper):
+class DZLRegressor(DZLWrapper):
 
     def _predict(self, fold_model, X, *args, **kwargs):
         x_trn = X.copy()

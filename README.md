@@ -6,11 +6,13 @@ Package which helps to organize model runs for tabular data
 Example:
 
 ```python
+import numpy as np
 import pandas as pd
-from dzl import ModelClassifierCV, OOFValidCallback
 import sklearn.linear_model
 from sklearn.datasets import make_classification
 from sklearn import metrics
+from dzl import DZLClassifier, OOFValidCallback
+
 
 X, y = make_classification(n_samples=5000, weights=[0.2, 0.8], n_clusters_per_class=4, n_informative=10)
 
@@ -23,7 +25,7 @@ display(y.head(5))
 
 
 oof_clbk = OOFValidCallback()
-model = ModelClassifierCV(model_cls=sklearn.linear_model.LogisticRegression,
+model = DZLClassifier(model_cls=sklearn.linear_model.LogisticRegression,
                           model_params=dict(),
                           fit_params=dict(),
                           cv_params=dict(shuffle=True),
@@ -36,7 +38,7 @@ print(f'\n\nAUC: {oof_score}')
 
 
 oof_clbk = OOFValidCallback()
-model = ModelClassifierCV(model_cls=sklearn.linear_model.LogisticRegression,
+model = DZLClassifier(model_cls=sklearn.linear_model.LogisticRegression,
                           model_params=dict(),
                           fit_params=dict(),
                           cv_cls=sklearn.model_selection.GroupKFold,
