@@ -99,7 +99,7 @@ class BaseCVWrapper:
     # any task
     def _fit(self, fold_model, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val, *args, **kwargs):
         for callback in self.callbacks:
-            fold_model, x_trn, y_trn, x_val, y_val, w_trn, w_val = callback.on_before_fold_fit(self, fold_model,
+            fold_model, x_trn, y_trn, w_trn, x_val, y_val, w_val = callback.on_before_fold_fit(self, fold_model,
                                                                                                trn_idx, val_idx,
                                                                                                x_trn, y_trn, w_trn,
                                                                                                x_val, y_val, w_val,
@@ -198,3 +198,6 @@ class ModelRegressorCV(BaseCVWrapper):
         for fold_model in lst_models:
             oof += self._predict(fold_model, X, *args, **kwargs) / (len(lst_models))
         return oof
+
+
+from catboost import cv

@@ -15,7 +15,7 @@ class BaseCallback:
 
     def on_before_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val, *args,
                            **kwargs):
-        return fold_model, x_trn, y_trn, x_val, y_val
+        return fold_model, x_trn, y_trn, w_trn, x_val, y_val, w_val
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         return
@@ -93,7 +93,7 @@ class TabNetCallback(BaseCallback):
         if w_trn is not None:
             return fold_model, x_trn.values, y_trn.values, w_trn.values, x_val.values, y_val.values, w_val.values
         else:
-            return fold_model, x_trn.values, y_trn.values, x_val.values, y_val.values
+            return fold_model, x_trn.values, y_trn.values, None, x_val.values, y_val.values, None
 
 
 class CatBoostFeatureImportanceCallback(BaseCallback):
