@@ -81,8 +81,9 @@ class DZLWrapper:
             self.fit_params[k] = v
 
         if fold_model.__module__ == 'catboost.core':
-            trn_pool = catboost.Pool(data=x_trn, label=y_trn, weight=w_trn)
-            val_pool = catboost.Pool(data=x_val, label=y_val, weight=w_val)
+            cat_features = fold_model._init_params.get('cat_features')
+            trn_pool = catboost.Pool(data=x_trn, label=y_trn, weight=w_trn, cat_features=cat_features)
+            val_pool = catboost.Pool(data=x_val, label=y_val, weight=w_val, cat_features=cat_features)
             fold_model.fit(X=trn_pool, eval_set=[trn_pool, val_pool], **self.fit_params)
             return fold_model
 
