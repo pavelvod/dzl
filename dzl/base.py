@@ -19,8 +19,6 @@ class BaseCVWrapper:
                  cv_params: Optional[dict] = None,
                  seeds: Optional[list] = None,
                  callbacks: Optional[list] = None,
-                 groups=None,
-
                  *args, **kwargs):
         self.n_folds: int = n_folds
         self.fit_params: dict = fit_params or {}
@@ -36,7 +34,6 @@ class BaseCVWrapper:
                 cv_cls = KFold
 
         self.cv_cls = cv_cls
-        self.groups = groups
         self.fold_models: defaultdict = defaultdict(dict)
         self.callbacks = callbacks or []
 
@@ -56,10 +53,10 @@ class BaseCVWrapper:
 
         return self.cv_cls(**cv_params)
 
-    def generate_folds(self, X, y, sample_weight):
+    def generate_folds(self, X, y, sample_weight, groups):
         for seed in self.seeds:
             cv_obj = self.get_cv_obj(seed)
-            for fold_id, (trn_idx, val_idx) in enumerate(cv_obj.split(X, y, groups=self.groups)):
+            for fold_id, (trn_idx, val_idx) in enumerate(cv_obj.split(X, y, groups=groups)):
                 x_trn, x_val = X.iloc[trn_idx, :], X.iloc[val_idx, :]
                 y_trn, y_val = y.iloc[trn_idx], y.iloc[val_idx]
                 if sample_weight is not None:
@@ -116,11 +113,11 @@ class BaseCVWrapper:
                                            **kwargs)
             return self
 
-    def fit(self, X, y, sample_weight=None, *args, **kwargs):
+    def fit(self, X, y, sample_weight=None, groups=None, *args, **kwargs):
         for callback in self.callbacks:
             X, y, sample_weight = callback.on_before_fit(self, X, y, sample_weight, *args, **kwargs)
 
-        for tmp in self.generate_folds(X, y, sample_weight):
+        for tmp in self.generate_folds(X, y, sample_weight=sample_weight, groups=groups):
             seed, fold_id, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val = tmp
             fold_model = self.model_cls(**self.model_params)
             self.fold_models[seed][fold_id] = fold_model
