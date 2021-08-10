@@ -7,6 +7,7 @@ from typing import Optional
 import catboost
 import numpy as np
 from sklearn.model_selection import StratifiedKFold, KFold
+from tqdm.notebook import tqdm
 
 
 class DZLWrapper:
@@ -19,8 +20,11 @@ class DZLWrapper:
                  cv_params: Optional[dict] = None,
                  seeds: Optional[list] = None,
                  callbacks: Optional[list] = None,
+                 tqdm_params: Optional[dict] = None,
                  *args, **kwargs):
+
         self.n_folds: int = n_folds
+
         self.fit_params: dict = fit_params or {}
         self.cv_params: dict = cv_params
         self.seeds: list = seeds or [42]
@@ -36,6 +40,7 @@ class DZLWrapper:
         self.cv_cls = cv_cls
         self.fold_models: defaultdict = defaultdict(dict)
         self.callbacks = callbacks or []
+        self.tqdm_params: dict = tqdm_params or {}
 
     # utils
     def get_cv_obj(self, seed):
@@ -53,6 +58,7 @@ class DZLWrapper:
 
         return self.cv_cls(**cv_params)
 
+
     def generate_folds(self, X, y, sample_weight, groups):
         for seed in self.seeds:
             cv_obj = self.get_cv_obj(seed)
@@ -65,8 +71,10 @@ class DZLWrapper:
                     w_trn, w_val = None, None
                 yield seed, fold_id, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val
 
+
     def fold_models_flatten(self):
         return reduce(lambda x, y: x + y, [list(d.values()) for d in self.fold_models.values()])
+
 
     def __fit(self, fold_model, x_trn, y_trn, w_trn, x_val, y_val, w_val, *args, **kwargs):
         for k, v in kwargs.items():
@@ -96,6 +104,7 @@ class DZLWrapper:
         fold_model.fit(x_trn, y_trn, sample_weight=w_trn, *args, **kwargs)
         return fold_model
 
+
     # any task
     def _fit(self, fold_model, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val, *args, **kwargs):
         for callback in self.callbacks:
@@ -113,11 +122,16 @@ class DZLWrapper:
                                            **kwargs)
             return self
 
+
     def fit(self, X, y, sample_weight=None, groups=None, *args, **kwargs):
         for callback in self.callbacks:
             X, y, sample_weight = callback.on_before_fit(self, X, y, sample_weight, *args, **kwargs)
 
-        for tmp in self.generate_folds(X, y, sample_weight=sample_weight, groups=groups):
+        for tmp in tqdm(self.generate_folds(X, y, sample_weight=sample_weight, groups=groups),
+                        total=self.n_folds * len(self.seeds),
+                        **self.tqdm_params
+
+                        ):
             seed, fold_id, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val = tmp
             fold_model = self.model_cls(**self.model_params)
             self.fold_models[seed][fold_id] = fold_model
@@ -198,6 +212,3 @@ class DZLRegressor(DZLWrapper):
         for fold_model in lst_models:
             oof += self._predict(fold_model, X, *args, **kwargs) / (len(lst_models))
         return oof
-
-
-from catboost import cv
