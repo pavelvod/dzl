@@ -23,7 +23,6 @@ grp = X.sum(1).div(5).astype(np.int32).abs()
 display(X.head(5))
 display(y.head(5))
 
-
 oof_clbk = OOFValidCallback()
 model = DZLClassifier(model_cls=sklearn.linear_model.LogisticRegression,
                           model_params=dict(),
