@@ -7,13 +7,14 @@ class BaseCallback:
     def __init__(self):
         pass
 
-    def on_before_fit(self, model, X, y, *args, **kwargs):
-        return X, y
+    def on_before_fit(self, model, X, y, sample_weight, *args, **kwargs):
+        return X, y, sample_weight
 
     def on_after_fit(self, model, X, y, *args, **kwargs):
         return
 
-    def on_before_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
+    def on_before_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val, *args,
+                           **kwargs):
         return fold_model, x_trn, y_trn, x_val, y_val
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
@@ -33,7 +34,7 @@ class OOFValidCallback(BaseCallback):
         self.n_seeds = None
         self.task = None
 
-    def on_before_fit(self, model, X, y, *args, **kwargs):
+    def on_before_fit(self, model, X, y, sample_weight, *args, **kwargs):
         self.task = Task.Classification if 'predict_proba' in dir(model.model_cls) else Task.Regression
         self.n_seeds = len(model.seeds)
 
@@ -41,7 +42,7 @@ class OOFValidCallback(BaseCallback):
             self.oof = np.zeros(shape=X.shape[0])
         if self.task == Task.Classification:
             self.oof = np.zeros(shape=(X.shape[0], y.nunique()))
-        return X, y
+        return X, y, sample_weight
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         if self.task == Task.Regression:
@@ -58,10 +59,10 @@ class FoldMetricCallback(BaseCallback):
         self.n_seeds = None
         self.task = None
 
-    def on_before_fit(self, model, X, y, *args, **kwargs):
+    def on_before_fit(self, model, X, y, sample_weight, *args, **kwargs):
         self.task = Task.Classification if 'predict_proba' in dir(model.model_cls) else Task.Regression
         self.n_seeds = len(model.seeds)
-        return X, y
+        return X, y, sample_weight
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         print({metric.__name__: metric(y_val, fold_model.predict_proba(x_val)[:, 1]) for metric in self.metric_list})
@@ -74,10 +75,10 @@ class FoldMultiClassMetricCallback(BaseCallback):
         self.n_seeds = None
         self.task = None
 
-    def on_before_fit(self, model, X, y, *args, **kwargs):
+    def on_before_fit(self, model, X, y, sample_weight, *args, **kwargs):
         self.task = Task.Classification if 'predict_proba' in dir(model.model_cls) else Task.Regression
         self.n_seeds = len(model.seeds)
-        return X, y
+        return X, y, sample_weight
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         print({metric.__name__: metric(y_val, fold_model.predict_proba(x_val)) for metric in self.metric_list})
@@ -87,8 +88,12 @@ class TabNetCallback(BaseCallback):
     def __init__(self):
         super().__init__()
 
-    def on_before_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
-        return fold_model, x_trn.values, y_trn.values, x_val.values, y_val.values
+    def on_before_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, w_trn, x_val, y_val, w_val, *args,
+                           **kwargs):
+        if w_trn is not None:
+            return fold_model, x_trn.values, y_trn.values, w_trn.values, x_val.values, y_val.values, w_val.values
+        else:
+            return fold_model, x_trn.values, y_trn.values, x_val.values, y_val.values
 
 
 class CatBoostFeatureImportanceCallback(BaseCallback):
@@ -96,8 +101,8 @@ class CatBoostFeatureImportanceCallback(BaseCallback):
         super().__init__()
         self.importances: list = []
 
-    def on_before_fit(self, model, X, y, *args, **kwargs):
-        return X, y
+    def on_before_fit(self, model, X, y, sample_weight, *args, **kwargs):
+        return X, y, sample_weight
 
     def on_after_fold_fit(self, model, fold_model, trn_idx, val_idx, x_trn, y_trn, x_val, y_val, *args, **kwargs):
         self.importances.append(dict(zip(fold_model.feature_names_, fold_model.feature_importances_)))
